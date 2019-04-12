@@ -13,14 +13,16 @@ Assignment:
   
 2E1. Which of the expressions below correspond to the statement: the probability of rain on Monday?  
 (1) Pr(rain)  
-(2) Pr(rain|Monday)  
-**(3) Pr(Monday|rain)**  
-(4) Pr(rain; Monday) = Pr(Monday)  
+**(2) Pr(rain|Monday)**  
+(3) Pr(Monday|rain)  
+**(4) Pr(rain, Monday) = Pr(Monday)**  
+
+4 & 2 are the same
   
 2E2. Which of the following statements corresponds to the expression: Pr(Monday|rain)?  
 (1) The probability of rain on Monday.  
-**(2) The probability of rain, given that it is Monday.**  
-(3) The probability that it is Monday, given that it is raining.  
+(2) The probability of rain, given that it is Monday.  
+**(3) The probability that it is Monday, given that it is raining.**  
 (4) The probability that it is Monday and that it is raining.  
   
 2E3. Which of the expressions below correspond to the statement: the probability that it is Monday,
@@ -28,7 +30,7 @@ given that it is raining?
 **(1) Pr(Monday|rain)**  
 (2) Pr(rain|Monday)  
 (3) Pr(rain|Monday) Pr(Monday)  
-(4) Pr(rain|Monday) Pr(Monday) = Pr(rain)  
+**(4) Pr(rain|Monday) Pr(Monday) = Pr(rain)**  
 (5) Pr(Monday|rain) Pr(rain) = Pr(Monday)  
 
 ---
