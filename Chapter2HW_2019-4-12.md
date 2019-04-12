@@ -204,3 +204,21 @@ side is black.
 > Five ways to get black on first...
 > 4/5 of those yield B/B
 
+2M6. Imagine that black ink is heavy, and so cards with black sides are heavier than cards with white sides. As a result, it’s less likely that a card with black sides is pulled from the bag. So again assume
+there are three cards: B/B, B/W, and W/W. Aft er experimenting a number of times, you conclude that
+for every way to pull the B/B card from the bag, there are 2 ways to pull the B/W card and 3 ways to
+pull the W/W card. Again suppose that a card is pulled and a black side appears face up. Show that
+the probability the other side is black is now 0.5. Use the counting method, as before.
+
+Card | Count | Ways | Multiply | probability
+-----|-------|------|----------|------------ 
+BB   | 2     | 1    | 2        | 2 / 4 = 0.5
+BW   | 1     | 2    | 2        | 2 / 4 = 0.5
+WW   | 0     | 3    | 0        | 0 / 4 = 0
+
+
+
+
+
+
+
