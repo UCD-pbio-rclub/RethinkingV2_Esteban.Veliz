@@ -42,7 +42,8 @@ prior for p.
 (2) W, W, W, L  
 (3) L, W, W, L, W, W, W  
 
-```{r}
+
+```r
 ## (1)
 # define grid
 p_grid <- seq( from=0 , to=1 , length.out=20 )
@@ -61,14 +62,29 @@ posterior1 <- unstd.posterior / sum(unstd.posterior)
 
 # plot
 plot( p_grid , posterior1 , type="b" , xlab="Probability of Water" , ylab="Posterior Probability" ) + mtext( "(1) W, W, W" )
+```
 
+![](Chapter2HW_2019-4-12_files/figure-html/unnamed-chunk-1-1.png)<!-- -->
+
+```
+## integer(0)
+```
+
+```r
 ## (2)
 likelihood <- dbinom( 3 , size=4 , prob=p_grid )
 unstd.posterior <- likelihood * prior
 posterior2 <- unstd.posterior / sum(unstd.posterior)
 plot( p_grid , posterior2 , type="b" , xlab="Probability of Water" , ylab="Posterior Probability" ) + mtext( "(2) W, W, W, L" )
+```
 
+![](Chapter2HW_2019-4-12_files/figure-html/unnamed-chunk-1-2.png)<!-- -->
 
+```
+## integer(0)
+```
+
+```r
 ##(3)
 likelihood <- dbinom( 5 , size=7 , prob=p_grid )
 unstd.posterior <- likelihood * prior
@@ -76,11 +92,18 @@ posterior3 <- unstd.posterior / sum(unstd.posterior)
 plot( p_grid , posterior3 , type="b" , xlab="Probability of Water" , ylab="Posterior Probability" ) + mtext( "(3) L, W, W, L, W, W, W" )
 ```
 
+![](Chapter2HW_2019-4-12_files/figure-html/unnamed-chunk-1-3.png)<!-- -->
+
+```
+## integer(0)
+```
+
 ?
 2M2. Now assume a prior for p that is equal to zero when p < 0:5 and is a positive constant when
 p > 0:5. Again compute and plot the grid approximate posterior distribution for each of the sets of
 observations in the problem just above.
-```{r}
+
+```r
 ## (1)
 # define grid
 p_grid <- seq( from=0 , to=1 , length.out=20 )
@@ -100,19 +123,40 @@ posterior2.1 <- unstd.posterior / sum(unstd.posterior)
 
 # plot
 plot( p_grid , posterior2.1 , type="b" , xlab="Probability of Water" , ylab="Posterior Probability" ) + mtext( "(1) W, W, W" )
+```
 
+![](Chapter2HW_2019-4-12_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
+
+```
+## integer(0)
+```
+
+```r
 ## (2)
 likelihood <- dbinom( 3 , size=4 , prob=p_grid )
 unstd.posterior <- likelihood * prior2
 posterior2.2 <- unstd.posterior / sum(unstd.posterior)
 plot( p_grid , posterior2.2 , type="b" , xlab="Probability of Water" , ylab="Posterior Probability" ) + mtext( "(2) W, W, W, L" )
+```
 
+![](Chapter2HW_2019-4-12_files/figure-html/unnamed-chunk-2-2.png)<!-- -->
 
+```
+## integer(0)
+```
+
+```r
 ##(3)
 likelihood <- dbinom( 5 , size=7 , prob=p_grid )
 unstd.posterior <- likelihood * prior2
 posterior2.3 <- unstd.posterior / sum(unstd.posterior)
 plot( p_grid , posterior2.3 , type="b" , xlab="Probability of Water" , ylab="Posterior Probability" ) + mtext( "(3) L, W, W, L, W, W, W" )
+```
+
+![](Chapter2HW_2019-4-12_files/figure-html/unnamed-chunk-2-3.png)<!-- -->
+
+```
+## integer(0)
 ```
 
 
@@ -123,14 +167,18 @@ which-was tossed in the air and produced a "land" observation. Assume that each 
 likely to be tossed. Show that the posterior probability that the globe was the Earth, conditional on
 seeing "land" (Pr(Earth|land)), is 0.23.
 
-```{r}
+
+```r
 prior.twoglobes = c(0.5, 0.5)
 prob.twoglobes = c(0.7, 0)
 likelihood.twoglobes = dbinom( 0, 1, prob.twoglobes)
 unstd.posterior.twoglobes = likelihood.twoglobes * prior.twoglobes
 posterior.twoglobes = unstd.posterior.twoglobes / sum(unstd.posterior.twoglobes)
 posterior.twoglobes
+```
 
+```
+## [1] 0.2307692 0.7692308
 ```
 
 ?
