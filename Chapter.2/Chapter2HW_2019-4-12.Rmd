@@ -168,7 +168,35 @@ BB   | 2     | 1    | 2        | 2 / 4 = 0.5
 BW   | 1     | 2    | 2        | 2 / 4 = 0.5
 WW   | 0     | 3    | 0        | 0 / 4 = 0
 
+*From Julin's*
+## 2H1. 
+_Suppose there are two species of panda bear. Both are equally common in the wild and live in the same places. They look exactly alike and eat the same food, and there is yet no genetic assay capable of telling them apart. They differ however in their family sizes. Species A gives birth to twins 10% of the time, otherwise birthing a single infant. Species B births twins 20% of the time, otherwise birthing singleton infants. Assume these numbers are known with certainty, from many years of field research._
 
+_Now suppose you are managing a captive panda breeding program. You have a new female panda of unknown species, and she has just given birth to twins. What is the probability that her next birth will also be twins?_
+
+```{r}
+prior.species.prob <- c(0.5, 0.5) %>% setNames(c("A","B"))
+prob.twins <- c(0.1, 0.2)
+post.species.prob.given.twins <- prior.species.prob * prob.twins
+(post.species.prob.given.twins <- post.species.prob.given.twins / sum(post.species.prob.given.twins) )
+twins.prob.given.twins <- post.species.prob.given.twins * prob.twins
+sum(twins.prob.given.twins)
+```
+
+## 2H2. 
+_Recall all the facts from the problem above. Now compute the probability that the panda we have is from species A, assuming we have observed only the first birth and that it was twins._
+
+```{r}
+# this was already calculated
+post.species.prob.given.twins["A"]
+```
+
+## 2H3. 
+_Continuing on from the previous problem, suppose the same panda mother has asecond birth and that it is not twins, but a singleton infant. Compute the posterior probability that this panda is species A._
+
+```{r}
+post.species.prob.given.twins.single <- post.species.prob.given.twins * (1-prob.twins)
+(post.species.prob.given.twins.single / sum(post.species.prob.given.twins.single))
 
 
 

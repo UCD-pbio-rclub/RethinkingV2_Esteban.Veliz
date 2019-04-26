@@ -1,0 +1,95 @@
+---
+title: "Chapter 4"
+author: "Esteban"
+date: "April 26, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(rethinking)
+```
+
+```{r, include=FALSE}
+par(mfrow=c(1,2))
+pos <- replicate( 1000 , sum( runif(16,-1,1) ) )
+plot(density(pos))
+hist(pos) 
+curve(exp( -x^2 ), from=-3, to=3)
+dnorm(0,0,0.1)
+```
+
+
+
+Reading: Chapter 4 through section 4.4.2  / page 98 
+
+Problems: 4E1-4E5; 4M1, 4M2, 4M3   
+
+### 4E1. In the model definition below, which line is the likelihood?  
+> $y \sim Normal(\mu, \sigma)\Leftarrow$  
+> $\mu \sim Normal(0; 10)$  
+> $\sigma \sim Uniform(0; 10)$  
+
+### 4E2. In the model definition just above, how many parameters are in the posterior distribution?
+> 2  
+
+### 4E3. Using the model definition above, write down the appropriate form of Bayes’ theorem that includes the proper likelihood and priors.  
+> $$Pr(\mu, \sigma | y) = \frac{\Pi_i Normal(y_i|\mu, \sigma) Normal(\mu|0; 10) Uniform(\sigma|0; 10)}{\iint \Pi_i Normal(y_i|\mu, \sigma)Normal(\mu|0; 10) Uniform(\sigma|0; 10)~d\mu~d\sigma}$$
+
+### 4E4. In the model definition below, which line is the linear model?  
+> $y_i \sim Normal(\mu, \sigma)$  
+> $\mu_i = \alpha + \beta x_i \Leftarrow$  
+> $\alpha \sim Normal(0; 10)$  
+> $\beta \sim Normal(0; 1)$  
+> $\sigma \sim Uniform(0; 10)$  
+
+### 4E5. In the model definition just above, how many parameters are in the posterior distribution?  
+> 3
+
+### 4M1. For the model definition below, simulate observed heights from the prior (not the posterior).  
+> $y_i \sim Normal(\mu; \sigma)$   
+> $\mu \sim Normal(0; 10)$   
+> $\sigma \sim Uniform(0; 10)$ 
+
+```{r}
+sample.mu <- rnorm( 1e4 , 0 , 10 )
+sample.sigma <- runif( 1e4 , 0 , 10 )
+prior.h <- rnorm( 1e4 , sample.mu , sample.sigma )
+
+# dens(prior.h)
+
+ggplot() + aes( prior.h ) +
+      geom_density( fill="gray") +
+      theme_classic()
+```
+
+
+### 4M2. Translate the model just above into a quap formula.  
+```{r}
+flist <- alist(
+    height ~ dnorm( mu , sigma ) ,
+    mu ~ dnorm( 0 , 10 ) ,
+    sigma ~ dunif( 0 , 10 )
+)
+
+```
+
+
+
+### 4M3. Translate the quap model formula below into a mathematical model definition.  
+
+```{r}
+# flist <- alist(
+# y ~ dnorm( mu , sigma ),
+# mu <- a + b*x,
+# a ~ dnorm( 0 , 50 ),
+# b ~ dunif( 0 , 10 ),
+# sigma ~ dunif( 0 , 50 )
+# )
+```
+$y_i \sim Normal(\mu_i, \sigma)$  
+$\mu_i = \alpha + \beta(x_i - \bar{x})$  
+$\alpha \sim Normal(0; 50)$  
+$\beta \sim Normal(0; 10)$  
+$\sigma \sim Uniform(0; 50)$  
