@@ -191,9 +191,9 @@ dens( sample2.sigma , norm.comp=TRUE )
 ```{r}
 ## R code 4.26
 # library(rethinking)
-# data(Howell1)
-# d <- Howell1
-# d2 <- d[ d$age >= 18 , ]
+data(Howell1)
+d <- Howell1
+d2 <- d[ d$age >= 18 , ]
 
 ## R code 4.27
 flist <- alist(
@@ -238,7 +238,9 @@ head(post)
 
 ## R code 4.35
 precis(post)
+```
 
+```{r}
 ## R code 4.36
 library(MASS)
 post <- mvrnorm( n=1e4 , mu=coef(m4.1) , Sigma=vcov(m4.1) )
@@ -272,7 +274,9 @@ set.seed(2971)
 N <- 100                   # 100 lines
 a <- rnorm( N , 178 , 20 )
 b <- rlnorm( N , 0 , 1 )
+```
 
+```{r}
 ## R code 4.42
 # load data again, since it's a long way back
 library(rethinking)
@@ -317,11 +321,15 @@ post <- extract.samples( m4.3 )
 a_map <- mean(post$a)
 b_map <- mean(post$b)
 curve( a_map + b_map*(x - xbar) , add=TRUE )
+```
 
+```{r}
 ## R code 4.47
 post <- extract.samples( m4.3 )
 post[1:5,]
+```
 
+```{r}
 ## R code 4.48
 N <- 10
 dN <- d2[ 1:N , ]
@@ -333,6 +341,9 @@ mN <- quap(
         b ~ dlnorm( 0 , 1 ) ,
         sigma ~ dunif( 0 , 50 )
     ) , data=dN )
+```
+
+```{r}
 
 ## R code 4.49
 # extract 20 samples from the posterior
@@ -348,7 +359,9 @@ mtext(concat("N = ",N))
 for ( i in 1:20 )
     curve( post$a[i] + post$b[i]*(x-mean(dN$weight)) ,
         col=col.alpha("black",0.3) , add=TRUE )
+```
 
+```{r}
 ## R code 4.50
 post <- extract.samples( m4.3 )
 mu_at_50 <- post$a + post$b * ( 50 - xbar )
@@ -358,7 +371,9 @@ dens( mu_at_50 , col=rangi2 , lwd=2 , xlab="mu|weight=50" )
 
 ## R code 4.52
 HPDI( mu_at_50 , prob=0.89 )
+```
 
+```{r}
 ## R code 4.53
 mu <- link( m4.3 )
 str(mu)
@@ -397,7 +412,9 @@ lines( weight.seq , mu.mean )
 
 # plot a shaded region for 89% HPDI
 shade( mu.HPDI , weight.seq )
+```
 
+```{r}
 ## R code 4.58
 post <- extract.samples(m4.3)
 mu.link <- function(weight) post$a + post$b*( weight - xbar )
@@ -499,13 +516,20 @@ plot( height ~ weight_s , d , col=col.alpha(rangi2,0.5) , xaxt="n" )
 at <- c(-2,-1,0,1,2)
 labels <- at*sd(d$weight) + mean(d$weight)
 axis( side=1 , at=at , labels=round(labels,1) )
+```
 
+```{r}
 ## R code 4.72
 library(rethinking)
 data(cherry_blossoms)
 d <- cherry_blossoms
 precis(d)
+str(d)
+plot(lm(doy ~temp, data=d))
 
+```
+
+```{r}
 ## R code 4.73
 d2 <- d[ complete.cases(d$temp) , ] # complete cases on temp
 num_knots <- 15
@@ -520,7 +544,9 @@ B <- bs(d2$year,
 ## R code 4.75
 plot( NULL , xlim=range(d2$year) , ylim=c(0,1) , xlab="year" , ylab="basis value" )
 for ( i in 1:ncol(B) ) lines( d2$year , B[,i] )
+```
 
+```{r}
 ## R code 4.76
 m4.7 <- quap(
     alist(

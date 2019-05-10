@@ -1,0 +1,185 @@
+---
+title: "Chapter 5"
+author: "Esteban"
+date: "May 8, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(rethinking)
+```
+
+## 5E1. Which of the linear models below are multiple linear regressions?  
+<!-- (1) $\mu_i = \alpha + \beta x_i$   -->
+(2) $\mu_i = \beta_x x_i + \beta_z z_i$  
+<!-- (3) $\mu_i = \alpha + \beta(x_i - z_i)$   -->
+(4) $\mu_i = \alpha + \beta_x x_i + \beta_z z_i$  
+
+## 5E3. Write down a multiple regression to evaluate the claim: Neither amount of funding nor size
+of laboratory is by itself a good predictor of time to PhD degree; but together these variables are both
+positively associated with time to degree. Write down the model definition and indicate which side of
+zero each slope parameter should be on.  
+
+$$time_i \sim Normal(\mu_i, \sigma) \\
+\mu_i = \alpha + \beta_f Funding_i + \beta_s Size_i \\
+\alpha \sim Normal(6, 1) \\
+\beta_f \sim Normal(0, 1)\\
+\beta_s \sim Normal(0, 1)\\
+\sigma \sim Exponential(1)\\$$
+
+(Slope should be positive)
+
+## 5M2. Invent your own example of a masked relationship. An outcome variable should be correlated
+with both predictor variables, but in opposite directions. And the two predictor variables should be
+correlated with one another. 
+
+
+
+
+## 5M3. It is sometimes observed that the best predictor of fire risk is the presence of firefighters—
+States and localities with many firefighters also have more fires. Presumably firefighters do not cause
+fires. Nevertheless, this is not a spurious correlation. Instead fires cause firefighters. Consider the
+same reversal of causal inference in the context of the divorce and marriage data. How might a high
+divorce rate cause a higher marriage rate? Can you think of a way to evaluate this relationship, using
+multiple regression?  
+> A divorce leaves two single people to be in the pool to marry again and thus increase the marriage rate. 
+
+
+
+
+## 5M4. In the divorce data, States with high numbers of Mormons (members of The Church of Jesus
+Christ of Latter-day Saints, LDS) have much lower divorce rates than the regression models expected.
+Find a list of LDS population by State and use those numbers as a predictor variable, predicting di-
+vorce rate using marriage rate, median age at marriage, and percent LDS population (possibly stan-
+dardized). You may want to consider transformations of the raw percent LDS variable.  
+```{r}
+data(WaffleDivorce)
+d <- WaffleDivorce
+
+d$LDSpct = c(0.78, 4.52, 6.03, 1.05, 1.92, 2.65, 0.44, 0.58, 0.40, 0.74, 0.82, 5.26, 26.02, 0.45, 0.68, 0.90, 1.31, 0.80, 0.64, 0.82, 0.73, 0.40, 0.45, 0.59, 0.72, 1.17, 4.74, 1.30, 0.65, 0.38, 3.31, 0.42, 0.85, 1.50, 0.53, 1.22, 3.66, 0.41, 0.39, 0.80, 1.21, 0.77, 1.25, 66.74, 0.74, 1.13, 3.84, 0.94, 0.46, 11.67)
+
+d$Marriage.std <- (d$Marriage - mean(d$Marriage)) / sd(d$Marriage)
+d$MedianAgeMarriage.std <- (d$MedianAgeMarriage - mean(d$MedianAgeMarriage)) / sd(d$MedianAgeMarriage)
+d$LDSpct.std <- (d$LDSpct - mean(d$LDSpct)) / sd(d$LDSpct)
+
+
+mod5M4 <- quap(
+  alist(
+    Divorce ~ dnorm( mean=mu, sd=sigma ),
+    mu <- a + bA*MedianAgeMarriage.std + bM*Marriage.std + bL*LDSpct.std,
+    a ~ dnorm(0, 0.2),
+    bA ~ dnorm(0, 0.5),
+    bM ~ dnorm(0, 0.5),
+    bL ~ dnorm(0, 1),
+    sigma ~ dexp(1)),
+  data = d)
+precis(mod5M4)
+
+```
+
+
+
+```{r}
+# xseq <- seq( from= , to=, length.out=100 )
+# 
+# pred <- link( mod5M4 , data=list( N=xseq) )
+# 
+# pred.mu <- apply( pred, 2, mean )
+# pred.HPDI <- apply( pred, 2, HPDI, .89 )
+# sim.divorce <- sim( mod5M4 )
+# sim.HPDI <- apply( sim.divorce, 2, HPDI, prob=0.89 )
+# 
+# plot(d$Divorce ~ pred.mu, data = d)
+# lines(weight.seq, mu.mean)
+# shade(mu.HPDI, weight.seq)
+# shade(sim.HPDI, weight.seq)
+# 
+# xseq <- seq( from=min(d$)-0.15 , to=max(dcc$N)+0.15 , length.out=30 )
+# mu <- link( mod5M4 , data=list(N=xseq) )
+# mu_mean <- apply(mu,2,mean)
+# mu_PI <- apply(mu,2,PI)
+# plot( K ~ N , data=dcc )
+# lines( xseq , mu_mean , lwd=2 )
+# shade( mu_PI , xseq )
+
+```
+
+# Hard:  All three exercises below use the same data, data(foxes) (part of rethinking). 79 The urban
+fox (Vulpes vulpes) is a successful exploiter of human habitat. Since urban foxes move in packs and
+defend territories, data on habitat quality and population density is also included. The data frame has
+five columns:
+(1) group: Number of the social group the individual fox belongs to
+(2) avgfood: The average amount of food available in the territory
+(3) groupsize: The number of foxes in the social group
+(4) area: Size of the territory
+(5) weight: Body weight of the individual fox
+
+## 5H1. Fit two bivariate Gaussian regressions, using quap: (1) body weight as a linear function of
+territory size (area), and (2) body weight as a linear function of groupsize. Plot the results of these
+regressions, displaying the MAP regression line and the 95% interval of the mean. Is either variable
+important for predicting fox body weight?  
+```{r}
+library(rethinking)
+data(foxes)
+d2 <- foxes
+
+# 1 territory
+mod5H1 <- quap(
+  alist(
+    weight ~ dnorm(mean = mu, sd = sigma),
+    mu <- alpha + bA*area,
+    alpha ~ dnorm(4.5, 1),
+    bA ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  data = d2
+)
+precis(mod5H1)
+
+area.seq <- seq(from = 0, to = 6, length.out = 100)
+mu <- link(mod5H1, data = data.frame(area = area.seq))
+mu.mean <- apply(mu, 2, FUN = mean)
+mu.PI <- apply(mu, 2, FUN = PI, prob = .89)
+
+plot(weight ~ area, data = d2)
+lines(x = area.seq, y = mu.mean)
+shade(object = mu.PI, lim = area.seq)
+
+
+#2 group size
+mod5H1.2 <- quap(
+  alist(
+    weight ~ dnorm(mean = mu, sd = sigma),
+    mu <- alpha + bG * groupsize,
+    alpha ~ dnorm(4.5, 1),
+    bG ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  data = d2
+)
+precis(mod5H1.2)
+
+groupsz.seq <- seq(from = 1, to = 9, length.out = 100)
+mu <- link(mod5H1.2, data = data.frame(area = groupsz.seq))
+mu.mean <- apply(mu, 2, FUN = mean)
+mu.PI <- apply(mu, 2, FUN = PI, prob = .89)
+
+plot(weight ~ groupsize, data = d2)
+lines(x = groupsz.seq, y = mu.mean)
+shade(object = mu.PI, lim = area.seq)
+
+
+```
+
+
+## 5H2. Now fit a multiple linear regression with weight as the outcome and both area and groupsize
+as predictor variables. Plot the predictions of the model for each predictor, holding the other predictor
+constant at its mean. What does this model say about the importance of each variable? Why do you
+get different results than you got in the exercise just above?  
+
+```{r}
+
+```
+
