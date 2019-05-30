@@ -12,6 +12,7 @@ output:
 
 
 ## 6H1
+Use the Waffle House data, data(WaffleDivorce), to find the total causal influence of number of Waffle Houses on divorce rate. Justify your model or models with a causal graph.
 
 ```r
 divorce_dag <- dagitty( "dag {
@@ -19,42 +20,89 @@ divorce_dag <- dagitty( "dag {
     S -> M -> D
     S -> W -> D
     A -> M
-}")
-coordinates( divorce_dag ) <- list( x=c(S=0, W=1, M=0.5, A=0, D=1),
-                                  y=c(S=0, W=0, M=0.5,   A=1, D=1) )
+                }")
+coordinates( divorce_dag ) <- list( x=c( S=0, W=1, M=0.5, A=0, D=1 ),
+                                    y=c( S=0, W=0, M=0.5, A=1, D=1 ))
 plot(divorce_dag)
 ```
 
 ![](Chapter6HW_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
 
 ```r
+# Scale data into variables
 d$D <- scale(d$Divorce)
 d$W <- scale(d$WaffleHouses)
-d$S <- scale((d$South +1))
+d$S <- d$South
 d$A <- scale(d$MedianAgeMarriage)
 d$M <- scale(d$Marriage)
+d$s.index <- d$South +1
 
-divorce_modS <- quap(
+# Index variables: north=1 south=2
+
+divorce_modS.I <- quap(
   alist(
     D ~ dnorm( mean=mu, sd=sigma ),
-    mu <- a + bW*W + bS*S,
-    a ~ dnorm( 0 , 0.2 ) ,
-        bW ~ dnorm( 0 , 0.5 ) ,
-        bS ~ dnorm( 0 , 0.5 ) ,
-        sigma ~ dexp( 1 )
-    ) , data = d )
-precis(divorce_modS)
+    mu <- a[s.index] + bW*W,
+    a[s.index] ~ dnorm( 0 , 0.2 ) ,
+    bW ~ dnorm( 0 , 0.5 ) ,
+    sigma ~ dexp( 1 )
+                      ) , data = d )
+precis(divorce_modS.I, depth=2)
 ```
 
 ```
-##                mean         sd        5.5%     94.5%
-## a     -2.331003e-06 0.10911680 -0.17439205 0.1743874
-## bW     5.244379e-02 0.16588020 -0.21266481 0.3175524
-## bS     2.891714e-01 0.16594792  0.02395454 0.5543882
-## sigma  9.206689e-01 0.09087258  0.77543701 1.0659009
+##              mean         sd        5.5%     94.5%
+## a[1]  -0.08760919 0.12882663 -0.29349902 0.1182806
+## a[2]   0.14145402 0.16884783 -0.12839743 0.4113055
+## bW     0.17101779 0.14424688 -0.05951658 0.4015522
+## sigma  0.93371282 0.09284762  0.78532439 1.0821013
+```
+
+```r
+# D modeled with W, A, M
+divorce_modAM <- quap(
+  alist(
+    D ~ dnorm( mean=mu, sd=sigma ),
+    mu <- a + bW*W + bA*A + bM*M,
+    a ~ dnorm( 0 , 0.2 ) ,
+        c(bW, bA, bM) ~ dnorm( 0 , 0.5 ) ,
+        sigma ~ dexp( 1 )
+    ) , data = d )
+precis(divorce_modAM)
+```
+
+```
+##                mean         sd         5.5%      94.5%
+## a     -3.116949e-08 0.09516344 -0.152089594  0.1520895
+## bW     1.782180e-01 0.10774055  0.006027739  0.3504082
+## bA    -5.843568e-01 0.14882317 -0.822204932 -0.3465086
+## bM    -5.006113e-02 0.14775331 -0.286199445  0.1860772
+## sigma  7.650635e-01 0.07584105  0.643854865  0.8862722
+```
+
+```r
+par(mfrow=c(2,1))
+plot(coeftab(divorce_modS.I))
+plot(coeftab(divorce_modAM))
+```
+
+![](Chapter6HW_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+
+```r
+# Not using index variables ?!
+# divorce_modS <- quap(
+#   alist(
+#     D ~ dnorm( mean=mu, sd=sigma ),
+#     mu <- a + bW*W + bS*S,
+#     a ~ dnorm( 0 , 0.2 ) ,
+#     c(bW,bS) ~ dnorm( 0 , 0.5 ) ,
+#     sigma ~ dexp( 1 )
+#                       ) , data = d )
+# precis(divorce_modS)
 ```
 
 ## 6H2
+Build a series of models to test the implied conditional independencies of the causal graph you used in the previous problem. If any of the tests fail, how do you think the graph needs to be amended? Does the graph need more or fewer arrows? Feel free to nominate variables that aren’t in the data.
 
 ```r
 impliedConditionalIndependencies(divorce_dag)
@@ -67,77 +115,88 @@ impliedConditionalIndependencies(divorce_dag)
 ```
 
 ```r
+# conditional independence 1 
 divorce_mod1 <- quap(
   alist(
     A ~ dnorm( mean=mu, sd=sigma ),
-    mu <- a + bS*S + bW*W,
-    a ~ dnorm( 0 , 0.2 ) ,
-        c(bW, bS) ~ dnorm( 0 , 0.5 ) ,
-        sigma ~ dexp( 1 )
-    ) , data = d )
-precis(divorce_mod1)
+    mu <- a[s.index] + bW*W,
+    a[s.index] ~ dnorm( 0 , 0.2 ) ,
+    bW ~ dnorm( 0 , 0.5 ) ,
+    sigma ~ dexp( 1 )
+                    ) , data = d )
+precis(divorce_mod1, depth=2)
 ```
 
 ```
-##                mean        sd       5.5%        94.5%
-## a     -2.198131e-08 0.1113628 -0.1779792 0.1779791935
-## bW     6.347922e-02 0.1700737 -0.2083314 0.3352897961
-## bS    -2.717138e-01 0.1701365 -0.5436249 0.0001971974
-## sigma  9.480115e-01 0.0935687  0.7984706 1.0975523374
+##              mean         sd       5.5%     94.5%
+## a[1]   0.08054829 0.13089820 -0.1286523 0.2897489
+## a[2]  -0.12835210 0.17006304 -0.4001457 0.1434415
+## bW    -0.04952100 0.14755090 -0.2853358 0.1862938
+## sigma  0.96058877 0.09540793  0.8081085 1.1130691
 ```
 
 ```r
+# conditional independence 2
 divorce_mod2 <- quap(
   alist(
     D ~ dnorm( mean=mu, sd=sigma ),
-    mu <- a + bS*S + bA*A + bM*M + bW*W,
-    a ~ dnorm( 0 , 0.2 ) ,
-        c(bW, bS, bA, bM) ~ dnorm( 0 , 0.5 ) ,
+    mu <- a[s.index] + bA*A + bM*M + bW*W,
+    a[s.index] ~ dnorm( 0 , 0.2 ) ,
+        c(bW, bA, bM) ~ dnorm( 0 , 0.5 ) ,
         sigma ~ dexp( 1 )
-    ) , data = d )
-precis(divorce_mod2)
+                    ) , data = d )
+precis(divorce_mod2, depth=2)
 ```
 
 ```
-##                mean         sd        5.5%      94.5%
-## a      1.244386e-10 0.09456290 -0.15112978  0.1511298
-## bW     8.659403e-02 0.14050156 -0.13795460  0.3111426
-## bS     1.451643e-01 0.14437791 -0.08557951  0.3759081
-## bA    -5.512406e-01 0.15155108 -0.79344849 -0.3090327
-## bM    -3.628275e-02 0.14737955 -0.27182373  0.1992582
-## sigma  7.588397e-01 0.07520257  0.63865146  0.8790279
+##              mean         sd        5.5%      94.5%
+## a[1]  -0.04923490 0.11397529 -0.23138944  0.1329196
+## a[2]   0.08727503 0.15863737 -0.16625813  0.3408082
+## bW     0.13915645 0.12270967 -0.05695731  0.3352702
+## bA    -0.57045799 0.14965425 -0.80963440 -0.3312816
+## bM    -0.04436592 0.14730903 -0.27979420  0.1910624
+## sigma  0.76088235 0.07555951  0.64012366  0.8816411
 ```
 
 ```r
+# conditional independence 3
 divorce_mod3 <- quap(
   alist(
     M ~ dnorm( mean=mu, sd=sigma ),
-    mu <- a + bW*W + bS*S ,
-    a ~ dnorm( 0 , 0.2 ) ,
-        c(bW, bS) ~ dnorm( 0 , 0.5 ),
-        sigma ~ dexp( 1 )
-    ) , data = d )
-precis(divorce_mod3)
+    mu <- a[s.index] + bW*W, 
+    a[s.index] ~ dnorm( 0 , 0.2 ) ,
+    bW ~ dnorm( 0 , 0.5 ),
+    sigma ~ dexp( 1 )
+                    ) , data = d )
+precis(divorce_mod3, depth=2)
 ```
 
 ```
-##                mean         sd       5.5%     94.5%
-## a     -3.197606e-07 0.11363582 -0.1816123 0.1816117
-## bW    -3.892094e-02 0.17424379 -0.3173962 0.2395543
-## bS     1.006656e-01 0.17425222 -0.1778231 0.3791543
-## sigma  9.764513e-01 0.09626031  0.8226087 1.1302938
+##               mean         sd       5.5%     94.5%
+## a[1]  -0.029530839 0.13200871 -0.2405063 0.1814446
+## a[2]   0.046661848 0.16998747 -0.2250110 0.3183347
+## bW     0.003163085 0.14952895 -0.2358131 0.2421392
+## sigma  0.978245745 0.09651781  0.8239916 1.1324999
 ```
+
+```r
+# Summary
+par(mfrow=c(3,1))
+plot(coeftab(divorce_mod1))
+plot(coeftab(divorce_mod2))
+plot(coeftab(divorce_mod3))
+```
+
+![](Chapter6HW_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
+
 ## Question 1
-1. Use a model to infer the total causal influence of area on weight. Would
+Use a model to infer the total causal influence of area on weight. Would
 increasing the area available to each fox make it heavier (healthier)? You
 might want to standardize the variables. Regardless, use prior predictive
 simulation to show that your model’s prior predictions stay within the pos-
 sible outcome range.
 
 ```r
-data(foxes)
-f <- foxes
-
 fox_dag <- dagitty( "dag{
                     area -> avgfood -> weight
                     avgfood -> groupsize -> weight
@@ -161,6 +220,8 @@ There are no back-door paths from area to weight.
 
 
 ```r
+data(foxes)
+f <- foxes
 f$W <- standardize(f$weight)
 f$A <- standardize(f$area)
 
@@ -177,9 +238,9 @@ precis(fox_mod)
 
 ```
 ##                mean         sd       5.5%     94.5%
-## a     -3.681273e-06 0.08360568 -0.1336217 0.1336143
-## bA     1.883458e-02 0.09089201 -0.1264284 0.1640976
-## sigma  9.912231e-01 0.06465949  0.8878847 1.0945614
+## a     -2.197346e-08 0.08360872 -0.1336229 0.1336229
+## bA     1.883386e-02 0.09089588 -0.1264353 0.1641030
+## sigma  9.912667e-01 0.06466659  0.8879170 1.0946164
 ```
 
 ```r
@@ -206,7 +267,7 @@ sim.bA <- rnorm( N, 0, 0.5 )
 sim.A <- seq( from=min(f$A) , to=max(f$A), length.out = N )
 sim.mu <- sim.a + sim.bA * sim.A
 sim.sigma <- rexp(N, 1) 
-prior.W <- rnorm(N, sim.mu, sim.sigma)
+prior.W <- rnorm(1e4, sim.mu, sim.sigma)
 
 par(mfrow=c(1,1))
 plot( NULL , xlim=range(f$A) , ylim=c(-4,4) , xlab="area" , ylab="weight" )
@@ -241,9 +302,9 @@ precis(fox_mod2)
 
 ```
 ##                mean         sd       5.5%     94.5%
-## a     -1.129047e-06 0.08360006 -0.1336102 0.1336079
-## bF    -2.421799e-02 0.09088488 -0.1694696 0.1210336
-## sigma  9.911424e-01 0.06465833  0.8878059 1.0944789
+## a     -2.159763e-07 0.08359998 -0.1336091 0.1336087
+## bF    -2.420646e-02 0.09088478 -0.1694579 0.1210450
+## sigma  9.911413e-01 0.06465814  0.8878051 1.0944775
 ```
 
 ```r
@@ -269,10 +330,10 @@ precis(fox_mod3)
 
 ```
 ##                mean         sd       5.5%      94.5%
-## a      1.331851e-05 0.08013281 -0.1280544  0.1280810
-## bF     4.771055e-01 0.17911369  0.1908472  0.7633638
-## bG    -5.733853e-01 0.17913211 -0.8596730 -0.2870976
-## sigma  9.419703e-01 0.06174051  0.8432970  1.0406435
+## a     -1.036217e-05 0.08013484 -0.1280813  0.1280606
+## bF     4.774083e-01 0.17911525  0.1911475  0.7636691
+## bG    -5.737808e-01 0.17913254 -0.8600692 -0.2874924
+## sigma  9.419987e-01 0.06174513  0.8433180  1.0406793
 ```
 
 ```r
