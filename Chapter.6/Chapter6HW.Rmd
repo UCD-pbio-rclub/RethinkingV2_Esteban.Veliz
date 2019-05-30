@@ -1,0 +1,184 @@
+---
+title: "Chapter 6 HW"
+author: "Esteban"
+date: "May 29, 2019"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(rethinking)
+library(tidyverse)
+library(dagitty)
+
+data(WaffleDivorce)
+d <- WaffleDivorce
+```
+
+## 6H1
+```{r}
+divorce_dag <- dagitty( "dag {
+    S -> A -> D
+    S -> M -> D
+    S -> W -> D
+    A -> M
+}")
+coordinates( divorce_dag ) <- list( x=c(S=0, W=1, M=0.5, A=0, D=1),
+                                  y=c(S=0, W=0, M=0.5,   A=1, D=1) )
+plot(divorce_dag)
+```
+```{r}
+d$D <- scale(d$Divorce)
+d$W <- scale(d$WaffleHouses)
+d$S <- scale((d$South +1))
+d$A <- scale(d$MedianAgeMarriage)
+d$M <- scale(d$Marriage)
+
+divorce_modS <- quap(
+  alist(
+    D ~ dnorm( mean=mu, sd=sigma ),
+    mu <- a + bW*W + bS*S,
+    a ~ dnorm( 0 , 0.2 ) ,
+        bW ~ dnorm( 0 , 0.5 ) ,
+        bS ~ dnorm( 0 , 0.5 ) ,
+        sigma ~ dexp( 1 )
+    ) , data = d )
+precis(divorce_modS)
+```
+
+## 6H2
+```{r}
+impliedConditionalIndependencies(divorce_dag)
+
+divorce_mod1 <- quap(
+  alist(
+    A ~ dnorm( mean=mu, sd=sigma ),
+    mu <- a + bS*S + bW*W,
+    a ~ dnorm( 0 , 0.2 ) ,
+        c(bW, bS) ~ dnorm( 0 , 0.5 ) ,
+        sigma ~ dexp( 1 )
+    ) , data = d )
+precis(divorce_mod1)
+
+divorce_mod2 <- quap(
+  alist(
+    D ~ dnorm( mean=mu, sd=sigma ),
+    mu <- a + bS*S + bA*A + bM*M + bW*W,
+    a ~ dnorm( 0 , 0.2 ) ,
+        c(bW, bS, bA, bM) ~ dnorm( 0 , 0.5 ) ,
+        sigma ~ dexp( 1 )
+    ) , data = d )
+precis(divorce_mod2)
+
+divorce_mod3 <- quap(
+  alist(
+    M ~ dnorm( mean=mu, sd=sigma ),
+    mu <- a + bW*W + bS*S ,
+    a ~ dnorm( 0 , 0.2 ) ,
+        c(bW, bS) ~ dnorm( 0 , 0.5 ),
+        sigma ~ dexp( 1 )
+    ) , data = d )
+precis(divorce_mod3)
+
+
+```
+## Question 1
+1. Use a model to infer the total causal influence of area on weight. Would
+increasing the area available to each fox make it heavier (healthier)? You
+might want to standardize the variables. Regardless, use prior predictive
+simulation to show that your model’s prior predictions stay within the pos-
+sible outcome range.
+```{r}
+data(foxes)
+f <- foxes
+
+fox_dag <- dagitty( "dag{
+                    area -> avgfood -> weight
+                    avgfood -> groupsize -> weight
+                    }")
+coordinates( fox_dag ) <- list( x=c(area=0.5, avgfood=0, groupsize=1, weight=0.5),
+                                  y=c(area=0, avgfood=0.5, groupsize=0.5, weight=1) )
+
+plot(fox_dag)
+
+adjustmentSets( fox_dag, exposure="area", outcome="weight" )
+```
+There are no back-door paths from area to weight.
+
+```{r}
+f$W <- standardize(f$weight)
+f$A <- standardize(f$area)
+
+fox_mod <- quap(
+  alist(
+    W ~ dnorm( mean=mu, sd=sigma ),
+    mu <- a + bA*A,
+    a ~ dnorm( 0 , 0.2 ) ,
+        bA ~ dnorm( 0 , 0.5 ) ,
+        sigma ~ dexp( 1 )
+    ) , data = f )
+precis(fox_mod)
+plot(coeftab(fox_mod))
+
+# plot prior parameters
+par(mfrow=c(3,1))
+curve( dnorm( x, 0 , 0.2 ), from=-1, to=1, ylab="prior for a" )
+curve( dnorm( x, 0 , 0.5 ), from=-2, to=2, ylab="prior for bA" )
+curve( dexp( x, 1), from=-0.01, to=5, ylab="prior for sigma" )
+
+# prior predictive simulation
+N <- 200
+sim.a <- rnorm( N, 0, 0.2 ) 
+sim.bA <- rnorm( N, 0, 0.5 )
+sim.A <- seq( from=min(f$A) , to=max(f$A), length.out = N )
+sim.mu <- sim.a + sim.bA * sim.A
+sim.sigma <- rexp(N, 1) 
+prior.W <- rnorm(N, sim.mu, sim.sigma)
+
+par(mfrow=c(1,1))
+plot( NULL , xlim=range(f$A) , ylim=c(-4,4) , xlab="area" , ylab="weight" )
+for ( i in 1:N ) curve( sim.a[i] + sim.bA[i]*x ,
+  from=min(f$A) , to=max(f$A) , add=TRUE ,
+  col=col.alpha("black",0.2) )
+
+dens( prior.W)
+
+```
+
+## Question 2
+```{r}
+f$F <- standardize(f$avgfood)
+
+fox_mod2 <- quap(
+  alist(
+    W ~ dnorm( mean=mu, sd=sigma ),
+    mu <- a + bF*F,
+    a ~ dnorm( 0 , 0.2 ) ,
+        bF ~ dnorm( 0 , 0.5 ) ,
+        sigma ~ dexp( 1 )
+    ) , data = f )
+precis(fox_mod2)
+plot(coeftab(fox_mod2))
+
+```
+
+## Question 3
+```{r}
+f$G <-  standardize(f$groupsize)
+fox_mod3 <- quap(
+  alist(
+    W ~ dnorm( mean=mu, sd=sigma ),
+    mu <- a + bF*F + bG*G,
+    a ~ dnorm( 0 , 0.2 ) ,
+        c( bF, bG ) ~ dnorm( 0 , 0.5 ) ,
+        sigma ~ dexp( 1 )
+    ) , data = f )
+precis(fox_mod3)
+plot(coeftab(fox_mod3))
+```
+

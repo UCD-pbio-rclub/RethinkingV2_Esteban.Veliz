@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(rethinking)
+library(GGally)
 ```
 
 ## 5E1. Which of the linear models below are multiple linear regressions?  
@@ -60,51 +61,32 @@ d <- WaffleDivorce
 
 d$LDSpct = c(0.78, 4.52, 6.03, 1.05, 1.92, 2.65, 0.44, 0.58, 0.40, 0.74, 0.82, 5.26, 26.02, 0.45, 0.68, 0.90, 1.31, 0.80, 0.64, 0.82, 0.73, 0.40, 0.45, 0.59, 0.72, 1.17, 4.74, 1.30, 0.65, 0.38, 3.31, 0.42, 0.85, 1.50, 0.53, 1.22, 3.66, 0.41, 0.39, 0.80, 1.21, 0.77, 1.25, 66.74, 0.74, 1.13, 3.84, 0.94, 0.46, 11.67)
 
-d$Marriage.std <- (d$Marriage - mean(d$Marriage)) / sd(d$Marriage)
-d$MedianAgeMarriage.std <- (d$MedianAgeMarriage - mean(d$MedianAgeMarriage)) / sd(d$MedianAgeMarriage)
-d$LDSpct.std <- (d$LDSpct - mean(d$LDSpct)) / sd(d$LDSpct)
+# d$Marriage.std <- (d$Marriage - mean(d$Marriage)) / sd(d$Marriage)
+# d$MedianAgeMarriage.std <- (d$MedianAgeMarriage - mean(d$MedianAgeMarriage)) / sd(d$MedianAgeMarriage)
+# d$LDSpct.std <- (d$LDSpct - mean(d$LDSpct)) / sd(d$LDSpct)
 
+
+d$L <- scale(d$LDSpct)
+d$A <- scale(d$MedianAgeMarriage)
+d$D <- scale(d$Divorce)
+d$M <- scale(d$Marriage)
 
 mod5M4 <- quap(
   alist(
-    Divorce ~ dnorm( mean=mu, sd=sigma ),
-    mu <- a + bA*MedianAgeMarriage.std + bM*Marriage.std + bL*LDSpct.std,
-    a ~ dnorm(0, 0.2),
-    bA ~ dnorm(0, 0.5),
-    bM ~ dnorm(0, 0.5),
-    bL ~ dnorm(0, 1),
-    sigma ~ dexp(1)),
-  data = d)
+    D ~ dnorm( mean=mu, sd=sigma ),
+    mu <- a + bM*M + bA*A + bL*L,
+ a ~ dnorm( 0 , 0.2 ) ,
+        bM ~ dnorm( 0 , 0.5 ) ,
+        bA ~ dnorm( 0 , 0.5 ) ,
+        bL ~ dnorm( 0 , 0.5 ) ,
+        sigma ~ dexp( 1 )
+    ) , data = d )
 precis(mod5M4)
 
+plot(coeftab(mod5M4))
 ```
 
 
-
-```{r}
-# xseq <- seq( from= , to=, length.out=100 )
-# 
-# pred <- link( mod5M4 , data=list( N=xseq) )
-# 
-# pred.mu <- apply( pred, 2, mean )
-# pred.HPDI <- apply( pred, 2, HPDI, .89 )
-# sim.divorce <- sim( mod5M4 )
-# sim.HPDI <- apply( sim.divorce, 2, HPDI, prob=0.89 )
-# 
-# plot(d$Divorce ~ pred.mu, data = d)
-# lines(weight.seq, mu.mean)
-# shade(mu.HPDI, weight.seq)
-# shade(sim.HPDI, weight.seq)
-# 
-# xseq <- seq( from=min(d$)-0.15 , to=max(dcc$N)+0.15 , length.out=30 )
-# mu <- link( mod5M4 , data=list(N=xseq) )
-# mu_mean <- apply(mu,2,mean)
-# mu_PI <- apply(mu,2,PI)
-# plot( K ~ N , data=dcc )
-# lines( xseq , mu_mean , lwd=2 )
-# shade( mu_PI , xseq )
-
-```
 
 # Hard:  All three exercises below use the same data, data(foxes) (part of rethinking). 79 The urban
 fox (Vulpes vulpes) is a successful exploiter of human habitat. Since urban foxes move in packs and
@@ -161,14 +143,14 @@ mod5H1.2 <- quap(
 )
 precis(mod5H1.2)
 
-groupsz.seq <- seq(from = 1, to = 9, length.out = 100)
-mu <- link(mod5H1.2, data = data.frame(area = groupsz.seq))
+groupsz.seq <- seq(from = min(d2$groupsize), to = max(d2$groupsize), length.out = 100)
+mu <- link(mod5H1.2, data = data.frame(groupsize = groupsz.seq))
 mu.mean <- apply(mu, 2, FUN = mean)
 mu.PI <- apply(mu, 2, FUN = PI, prob = .89)
 
 plot(weight ~ groupsize, data = d2)
 lines(x = groupsz.seq, y = mu.mean)
-shade(object = mu.PI, lim = area.seq)
+shade(object = mu.PI, lim = groupsz.seq)
 
 
 ```
@@ -180,6 +162,28 @@ constant at its mean. What does this model say about the importance of each vari
 get different results than you got in the exercise just above?  
 
 ```{r}
+mod5H2 <- quap(
+  alist(
+    weight ~ dnorm(mean = mu, sd = sigma),
+    mu <- alpha + bG * groupsize + bA * area,
+    alpha ~ dnorm(4.5, 1),
+    bG ~ dnorm(0, 1),
+    bA ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  data = d2
+)
+precis(mod5H2)
 
+plot(coeftab(mod5H1,mod5H1.2,mod5H2), par=c("bS","bA") )
+
+groupsz.seq <- seq(from = min(d2$groupsize), to = max(d2$groupsize), length.out = 100)
+mu <- link(mod5H2, data = data.frame(groupsize = groupsz.seq))
+mu.mean <- apply(mu, 2, FUN = mean)
+mu.PI <- apply(mu, 2, FUN = PI, prob = .89)
+
+plot(weight ~ groupsize, data = d2)
+lines(x = groupsz.seq, y = mu.mean)
+shade(object = mu.PI, lim = groupsz.seq)
 ```
 
