@@ -70,16 +70,16 @@ par(mfrow=c(2,1))
 plot(coeftab(divorce_modS.I))
 plot(coeftab(divorce_modAM))
 
-# Not using index variables ?!
-# divorce_modS <- quap(
-#   alist(
-#     D ~ dnorm( mean=mu, sd=sigma ),
-#     mu <- a + bW*W + bS*S,
-#     a ~ dnorm( 0 , 0.2 ) ,
-#     c(bW,bS) ~ dnorm( 0 , 0.5 ) ,
-#     sigma ~ dexp( 1 )
-#                       ) , data = d )
-# precis(divorce_modS)
+#Not using index variables ?!
+divorce_modS <- quap(
+  alist(
+    D ~ dnorm( mean=mu, sd=sigma ),
+    mu <- a + bW*W + bS*S,
+    a ~ dnorm( 0 , 0.2 ) ,
+    c(bW,bS) ~ dnorm( 0 , 0.5 ) ,
+    sigma ~ dexp( 1 )
+                      ) , data = d )
+precis(divorce_modS)
 ```
 
 ## 6H2
@@ -189,6 +189,14 @@ for ( i in 1:N ) curve( sim.a[i] + sim.bA[i]*x ,
   col=col.alpha("black",0.2) )
 
 dens( prior.W)
+
+
+# Other way to extract priors
+priorw2 <- extract.prior(fox_mod)
+str(priorw2)
+mu <- link (fox_mod, post=priorw2, data=list(A=c(-2,2))) 
+
+qplot(x=-2,xend=2,y=mu[1:50,1],yend=mu[1:50,2], geom="segment", alpha=.2, xlab="area", ylab="weight")
 
 ```
 
