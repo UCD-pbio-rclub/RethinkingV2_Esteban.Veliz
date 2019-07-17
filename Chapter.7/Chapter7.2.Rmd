@@ -23,7 +23,7 @@ Assumes:
 $DIC = ?$  
  * accomodates informative priors, but still assumes that the posterior is multivariate Gaussian and that sample size $N >> k$ parameters.  
 
-> ###WAIC 
+> ###WAIC  
  $WAIC = -2(lppd - p_WAIC)$  
  $p_WAIC = \Sigma  var_\theta  log  p(y_i|\theta)$  
  * Most general  
@@ -42,7 +42,7 @@ $DIC = ?$
 
 
 ##7M4. What happens to the effective number of parameters, as measured by DIC or WAIC, as a prior becomes more concentrated? Why? Perform some experiments, if you are not sure.
->The effective number of parameters will decrease because a concentrated prior in practice will reduce the influence of the less informative parameters in the model.
+>The effective number of parameters will decrease because a concentrated prior in practice will reduce the influence of the less informative parameters in the model. The penalty term will be lower in the more concentrated prior. This constrains the coefficients to be close to zero or whatever value you set them to.
 
 ##7M5. Provide an informal explanation of why informative priors reduce overfitting.
 > Informative priors can reduce the effect of the extreme, irregular parameter values and hone in on the regular features. Informative priors can be like a noise-canceling device for the model that is driven by feedforward instead of feedback.
