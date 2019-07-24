@@ -1,0 +1,300 @@
+---
+title: "Ch7.3HW"
+author: "Esteban"
+date: "July 23, 2019"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+
+
+##1. Consider three fictional Polynesian islands. On each there is a Royal Ornithologist charged by the king with surveying the birb population. They have each found the following proportions of 5 important birb species:  
+Birb A Birb B Birb C Birb D Birb E  
+Island 1 0.2 0.2 0.2 0.2 0.2  
+Island 2 0.8 0.1 0.05 0.025 0.025  
+Island 3 0.05 0.15 0.7 0.05 0.05  
+
+
+
+```r
+island1 <- c(0.2, 0.2, 0.2, 0.2, 0.2)
+island2 <- c(0.8,0.1, 0.05, 0.025, 0.025)
+island3 <- c(0.05, 0.15, 0.7, 0.05, 0.05)
+```
+
+
+Notice that each row sums to 1, all the birbs. This problem has two parts. It is not computationally complicated. But it is conceptually tricky.  
+First, compute the entropy of each island’s birb distribution. Interpret these entropy values.  
+
+```r
+entropy <- function(x){
+  cat( substitute(x),
+  - sum( x * log(x) ),
+  "\n")}
+
+cat("Shannon Entropy", "\n\n")
+```
+
+```
+## Shannon Entropy
+```
+
+```r
+entropy(island1)
+```
+
+```
+## island1 1.609438
+```
+
+```r
+entropy(island2)
+```
+
+```
+## island2 0.7430039
+```
+
+```r
+entropy(island3)
+```
+
+```
+## island3 0.9836003
+```
+> Island 1 has the highest entropy, followed by 3 and 2. There is more entropy when the proportional abundances of each species are more similar, that is when we have species evenness as in island 1. Abundant and rare taxa decrease entropy, especially when we are only dealing with few taxa. Island 2 with the lowest entropy has the highest predictability since we would expect seeing species 1 most of the time.  
+
+
+Second, use each island’s birb distribution to predict the other two. This means to compute the K-L Divergence of each island from the others, treating each island as if it were a statistical model of the other islands. You should end up with 6 diff erent K-L Divergence values. Which island predicts the others best? Why?   
+
+```r
+DKL <- function(p1, p2, q){
+  dframe = data.frame(
+            KLDivergence=c(
+                             -sum(p1 * (log(q) - log(p1))),
+                             -sum(p2 * (log(q) - log(p2)))
+                             ))
+  rownames(dframe) <- c(substitute(p1), substitute(p2))
+  dframe
+  }
+
+#island 1 as model
+DKL(island2, island3, island1)
+```
+
+```
+##         KLDivergence
+## island2    0.8664340
+## island3    0.6258376
+```
+
+```r
+#island 2 as model
+DKL(island1, island3, island2)
+```
+
+```
+##         KLDivergence
+## island1    0.9704061
+## island3    1.8388452
+```
+
+```r
+#island 3 as model
+DKL(island1, island2, island3)
+```
+
+```
+##         KLDivergence
+## island1    0.6387604
+## island2    2.0109142
+```
+> The model from the first island predicts the others better, as it has the overall lowest KL divergence. Being that it has the highest entropy, and is the most even, this is what we expected. There is little uncertainty in any species the model from island 1 observes because it expects them all the same, even if the distributions are vastly different from one another. Interestingly, island 3 models island 1 just about the same, but is not flexible like the model from island 1.  
+
+
+##2. Recall the marriage, age, and happiness collider bias example from Chapter 6. Run models m6.9 and m6.10 again. Compare these two models using WAIC (or LOO, they will produce identical results). Which model is expected to make better predictions? Which model provides the correct causal inference about the influence of age on happiness? Can you explain why the answers to these two questions disagree?   
+
+```r
+#-----------Code from Chapter 6---------------#
+## R code 6.22
+# library(rethinking)
+d <- sim_happiness( seed=1977 , N_years=1000 )
+# precis(d)
+
+## R code 6.23
+d2 <- d[ d$age>17 , ] # only adults
+d2$A <- ( d2$age - 18 ) / ( 65 - 18 )
+
+## R code 6.24
+d2$mid <- d2$married + 1
+m6.9 <- quap(
+    alist(
+        happiness ~ dnorm( mu , sigma ),
+        mu <- a[mid] + bA*A,
+        a[mid] ~ dnorm( 0 , 1 ),
+        bA ~ dnorm( 0 , 2 ),
+        sigma ~ dexp(1)
+    ) , data=d2 )
+# precis(m6.9,depth=2)
+
+## R code 6.25
+m6.10 <- quap(
+    alist(
+        happiness ~ dnorm( mu , sigma ),
+        mu <- a + bA*A,
+        a ~ dnorm( 0 , 1 ),
+        bA ~ dnorm( 0 , 2 ),
+        sigma ~ dexp(1)
+    ) , data=d2 )
+# precis(m6.10)
+```
+
+
+```r
+library(dagitty)
+```
+
+```
+## Warning: package 'dagitty' was built under R version 3.5.3
+```
+
+```r
+happy_dag <- dagitty( "dag{
+                    Happiness -> MarriageStatus <- Age
+                    }")
+plot(graphLayout(happy_dag))
+```
+
+![](Chapter7.3_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
+
+```r
+compare(m6.9,m6.10)
+```
+
+```
+##           WAIC    pWAIC    dWAIC       weight       SE      dSE
+## m6.9  2713.971 3.738532   0.0000 1.000000e+00 37.54465       NA
+## m6.10 3101.906 2.340445 387.9347 5.768312e-85 27.74379 35.40032
+```
+> Model m6.9 has a lower WAIC than 6.10 and thus is expected to make better predictions. However, we cannot make causal inferences because recall m6.9 includes both marriage status *and* age. Both happiness and age influence marriage status, forming a collider in our causal model. That said, we can use the whole path, collider and everything, to make better predictions since it still does contain information about the association.  
+
+##3. Reconsider the urban fox analysis from last week’s homework. Use WAIC or LOO based model comparison on five different models, each using weight as the outcome, and containing these sets of predictor variables:  
+(1) avgfood + groupsize + area  
+(2) avgfood + groupsize  
+(3) groupsize + area  
+(4) avgfood  
+(5) area  
+Can you explain the relative differences in WAIC scores, using the fox DAG from last week’s homework? Be sure to pay attention to the standard error of the score differences(dSE).  
+
+
+```r
+#-------Chapter 6 HW Code--------#
+
+# Load and standardize data
+data(foxes)
+d <- foxes
+d$W <- standardize(d$weight)
+d$F <- standardize(d$avgfood)
+d$G <- standardize(d$groupsize)
+d$A <- standardize(d$area)
+
+
+# Make models
+m1 <- quap(
+alist(
+  W ~ dnorm( mu , sigma ),
+  mu <- a + bF*F + bG*G + bA*A,
+  a ~ dnorm(0, 0.2),
+  c(bF,bG,bA) ~ dnorm(0, 0.5),
+  sigma ~ dexp(1)
+      ), data=d )
+
+m2 <- quap(
+alist(
+  W ~ dnorm( mu , sigma ),mu <- a + bF*F + bG*G,
+  a ~ dnorm(0,0.2),
+  c(bF,bG) ~ dnorm(0,0.5),
+  sigma ~ dexp(1)
+      ), data=d )
+
+m3 <- quap(
+alist(
+  W ~ dnorm( mu , sigma ),
+  mu <- a + bG*G + bA*A,
+  a ~ dnorm(0,0.2),
+  c(bG,bA) ~ dnorm(0,0.5),
+  sigma ~ dexp(1)
+      ), data=d )
+
+m4 <- quap(
+alist(
+  W ~ dnorm( mu , sigma ),
+  mu <- a + bF*F,
+  a ~ dnorm(0,0.2),
+  bF ~ dnorm(0,0.5),
+  sigma ~ dexp(1)
+      ), data=d )
+
+m5 <- quap(
+alist(
+  W ~ dnorm( mu , sigma ),
+  mu <- a + bA*A,
+  a ~ dnorm(0,0.2),
+  bA ~ dnorm(0,0.5),
+  sigma ~ dexp(1)
+      ), data=d )
+
+m6 <- quap(
+alist(
+  W ~ dnorm( mu , sigma ),
+  mu <- a + bG*G,
+  a ~ dnorm(0,0.2),
+  bG ~ dnorm(0,0.5),
+  sigma ~ dexp(1)
+      ), data=d )
+```
+
+
+```r
+#-----DAG from Chapter 6 HW--------#
+library(dagitty)
+fox_dag <- dagitty( "dag{
+                    area -> avgfood -> weight
+                    avgfood -> groupsize -> weight
+                    }")
+coordinates( fox_dag ) <- list( x=c(area=0.5, avgfood=0, groupsize=1, weight=0.5),
+                                  y=c(area=0, avgfood=0.5, groupsize=0.5, weight=1) )
+
+plot(fox_dag)
+```
+
+![](Chapter7.3_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
+
+```r
+adjustmentSets( fox_dag, exposure="area", outcome="weight" )
+```
+
+```
+##  {}
+```
+
+```r
+# ------ Compare WAIC of models ------#
+compare(m1, m2, m3, m4, m5, m6)
+```
+
+```
+##        WAIC    pWAIC     dWAIC      weight       SE      dSE
+## m1 323.5752 5.047204 0.0000000 0.373705062 16.40177       NA
+## m2 323.8344 3.674922 0.2591312 0.328291279 15.91044 3.552841
+## m3 324.1357 3.850007 0.5604683 0.282374087 15.89026 3.065905
+## m6 330.7447 2.636432 7.1694546 0.010368160 14.58928 6.082052
+## m5 333.4660 2.511490 9.8907810 0.002659336 13.73827 7.368913
+## m4 333.5096 2.445803 9.9343146 0.002602076 13.77128 7.314989
+```
+> * The lowest WAIC belongs to m1, m3, and m2 and we cannot distinguish between them because the dSE is higher than the difference. These models all include groupsize, whereas the worst performing models, m4 and m5 do not include groupsize.  
+  * There are also no collider paths that would be opened by including all the terms, thus the model with all 3 performs just as well as the other models which incorporate either food or area as well as groupsize. As long as the two paths to weight are there    
+  * There are no backdoor paths from area to weight such that the influence of area is entirely through food and thus m4 and m5 are pretty much equivalent.  
+  * I included m6 as an additional model with only groupsize and it does slightly better than any other of the models with one term, since groupsize channels information from all the others.  
+
