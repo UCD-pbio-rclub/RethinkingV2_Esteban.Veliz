@@ -255,26 +255,41 @@ compare(m8H3.C1, m8H3.C2, m8H3.C3)
 ##Plus, use the tomato.csv (attached) data set and evaluate whether hypocotyl length ("hyp") is affected by shade ("trt"), species ("species") and their interaction.
 ```{r}
 tomato <- read.csv("Tomato.csv")
-head(tomato)
-str(tomato)
+tomato <- subset(tomato, select = c(hyp, trt, species))
 
-tomato$h <- standardize(tomato$hyp)
-
+tomato$h <- tomato$hyp / max(tomato$hyp)
 tomato$s <- tomato$species %>% as.numeric()
 tomato$t <- tomato$trt %>% as.numeric() - 1
 
-tomato <- tomato %>% cbind( model.matrix(~s, data=tomato) )
+head(tomato)
+str(tomato)
+
 ```
 
 ```{r}
-# mtomato <- quap(
-#     alist(
-#         h ~ dnorm( mu , sigma ) ,
-#         mu <- a + bShade*t +  bSpecies*species + bSS*t*s ,
-#         a ~ dnorm( 0 , 1 ) ,
-#         c(bShade,bSpecies,bSS) ~ dnorm( 0 , 1 ) ,
-#         sigma ~ dexp( 1 )
-#     ) ,
-#     data=tomato )
-# precis(mtomato, depth=2)
+mtomato <- quap(
+    alist(
+        h ~ dnorm( mu , sigma ) ,
+        mu <- a[s] + b*t ,
+        a[s] ~ dnorm( 0 , 1 ) ,
+        b ~ dnorm( 0 , 1 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=tomato )
+
+
+mtomato.int <- quap(
+    alist(
+        h ~ dnorm( mu , sigma ) ,
+        mu <- a[s] + b[s]*t ,
+        a[s] ~ dnorm( 0 , 1 ) ,
+        b[s] ~ dnorm( 0 , 1 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=tomato )
+
+precis(mtomato, depth=2)
+precis(mtomato.int, depth=2)
+
+compare(mtomato, mtomato.int)
 ```
