@@ -1,0 +1,280 @@
+---
+title: "Ch8HW"
+author: "Esteban"
+date: "July 26, 2019"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rethinking)
+library(tidyverse)
+```
+
+##8E1. For each of the causal relationships below, name a hypothetical third variable that would lead to an interaction effect.  
+(1) Bread dough rises because of yeast.  
+> * temperature, [sugar]   
+
+(2) Education leads to higher income.   
+> * family
+* local environment (i.e., opportunities e.g. city vs. rural)  
+* nutrition  
+* choice of major  
+
+(3) Gasoline makes a car go.  
+> * spark plugs  
+
+##8M3. In parts of North America, ravens depend upon wolves for their food. This is because ravens
+are carnivorous but cannot usually kill or open carcasses of prey. Wolves however can and do kill
+and tear open animals, and they tolerate ravens co-feeding at their kills. This species relationship
+is generally described as a “species interaction.” Can you invent a hypothetical set of data on raven
+population size in which this relationship would manifest as a statistical interaction? Do you think
+the biological interaction could be linear? Why or why not?  
+
+```{r}
+# Number of samples
+N <- 1000
+
+# Prey
+prey <- rnorm(N, mean=0, sd=1)
+
+# Wolf
+m.wolf <- 0.5*prey
+wolf <- rnorm( N, mean=m.wolf, sd=1 )
+
+# Raven
+m.raven <- 0.1*prey + 0.3*wolf*prey 
+raven <- rnorm( N, mean=m.raven, sd=1 )
+
+# Make data frame
+df.raven <- data.frame(raven, prey, wolf)
+```
+
+```{r}
+# Raven-wolf-prey model
+m8M3 <- quap(
+  alist(
+    raven ~ dnorm( mu, sigma ),
+    mu <- a + bP*prey + bW*wolf + bPW*prey*wolf,
+    a ~ dnorm( 0, 1 ),
+    c( bP, bW, bPW ) ~ dnorm( 0, 1 ),
+    sigma ~ dunif( 0, 3 )
+  ),
+  data = df.raven)
+
+precis(m8M3)
+```
+
+
+
+
+##8H3. Consider again the data(rugged) data on economic development and terrain ruggedness,
+examined in this chapter. One of the African countries in that example, Seychelles, is far outside
+the cloud of other nations, being a rare country with both relatively high GDP and high ruggedness.
+Seychelles is also unusual, in that it is a group of islands far from the coast of mainland Africa, and
+its main economic activity is tourism.  
+
+One might suspect that this one nation is exerting a strong influence on the conclusions. In
+this problem, I want you to drop Seychelles from the data and re-evaluate the hypothesis that the
+relationship of African economies with ruggedness is different from that on other continents.  
+
+(a) Begin by using map to fit just the interaction model:  
+$y_i \sim Normal(\mu_i, \sigma)$    
+$\mu_i = \alpha + \beta_A A_i + \beta_R R_i + \beta_{AR} A_i R_i$
+
+where y is log GDP per capita in the year 2000 (log of rgdppc_2000); A is cont_africa, the dummy
+variable for being an African nation; and R is the variable rugged. Choose your own priors. Compare
+the inference from this model fit to the data without Seychelles to the same model fit to the full data. Does it still seem like the effect of ruggedness depends upon continent? How much has the expected relationship changed? 
+
+```{r}
+## R code 8.1
+data(rugged)
+d <- rugged
+
+# make log version of outcome
+d$log_gdp <- log( d$rgdppc_2000 )
+
+# extract countries with GDP data
+dd <- d[ complete.cases(d$rgdppc_2000) , ]
+
+# rescale variables
+dd$log_gdp_std <- dd$log_gdp / mean(dd$log_gdp)
+dd$rugged_std <- dd$rugged / max(dd$rugged)
+
+# split countries into Africa and not-Africa
+d.A1 <- dd[ dd$cont_africa==1 , ] # Africa
+d.A0 <- dd[ dd$cont_africa==0 , ] # not Africa
+
+########################
+  # Sí Sey ------------#
+m8H3 <- quap(
+    alist(
+        log_gdp_std ~ dnorm( mu , sigma ) ,
+        mu <- a + bA*cont_africa +  bR*rugged_std + bAR*cont_africa*rugged_std ,
+        a ~ dnorm( 1 , 0.1 ) ,
+        c(bA, bR, bAR) ~ dnorm( 0 , 0.3 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=dd )
+precis(m8H3, depth=2)
+
+  # No Sey ------------#
+dd.noSey <- dd %>% subset( country!="Seychelles" )
+# dd.noSey <- dd[ dd$country!="Seychelles", ]
+
+m8H3.noSey <- quap(
+    alist(
+        log_gdp_std ~ dnorm( mu , sigma ) ,
+        mu <- a + bA*cont_africa +  bR*rugged_std + bAR*cont_africa*rugged_std ,
+        a ~ dnorm( 1 , 0.1 ) ,
+        c(bA, bR, bAR) ~ dnorm( 0 , 0.3 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=dd.noSey )
+precis(m8H3.noSey, depth=2)
+
+```
+> There is less of an interaction effect, indicated by the slope bAR going from 0.25 to 0.18.  
+
+(b) Now plot the predictions of the interaction model, with and without Seychelles. Does it still
+seem like the effect of ruggedness depends upon continent? How much has the expected relationship
+changed?  
+
+```{r}
+par(mfrow = c(2, 2))
+####------ With Seychelles -------###
+d.A1.noSey <- subset(d.A1, country!="Seychelles")
+
+## R code 8.17
+# plot Africa - cont_africa=1
+plot( d.A1$rugged_std , d.A1$log_gdp_std , pch=16 , col=rangi2 ,
+    xlab="ruggedness (standardized)" , ylab="log GDP (as proportion of mean)" ,
+    xlim=c(0,1) )
+
+rugged_seq <- seq( from=-0.1 , to=1.1 , length.out=30 )
+mu <- link( m8H3 , data=data.frame( cont_africa=1 , rugged_std=rugged_seq ) )
+mu_mean <- apply( mu , 2 , mean )
+mu_ci <- apply( mu , 2 , PI , prob=0.97 )
+
+lines( rugged_seq , mu_mean , lwd=2 )
+shade( mu_ci , rugged_seq , col=col.alpha(rangi2,0.3) )
+mtext("African nations")
+
+# plot non-Africa - cont_africa=0
+plot( d.A0$rugged_std , d.A0$log_gdp_std , pch=1 , col="black" ,
+    xlab="ruggedness (standardized)" , ylab="log GDP (as proportion of mean)" ,
+    xlim=c(0,1) )
+mu <- link( m8H3 , data=data.frame( cont_africa=0 , rugged_std=rugged_seq ) )
+mu_mean <- apply( mu , 2 , mean )
+mu_ci <- apply( mu , 2 , PI , prob=0.97 )
+lines( rugged_seq , mu_mean , lwd=2 )
+shade( mu_ci , rugged_seq )
+mtext("Non-African nations")
+
+
+###--------- Without Seychelles ------###
+d.A1.noSey <- subset( d.A1, country!="Seychelles" )
+
+## R code 8.17
+# plot Africa - cont_africa=1
+plot( d.A1.noSey$rugged_std , d.A1.noSey$log_gdp_std , pch=16 , col=rangi2 ,
+    xlab="ruggedness (standardized)" , ylab="log GDP (as proportion of mean)" ,
+    xlim=c(0,1) )
+
+rugged.seq <- seq( from=-0.1 , to=1.1 , length.out=30 )
+mu <- link( m8H3.noSey , data=data.frame( cont_africa=1 , rugged_std=rugged_seq ) )
+mu_mean <- apply( mu , 2 , mean )
+mu_ci <- apply( mu , 2 , PI , prob=0.97 )
+
+lines( rugged_seq , mu_mean , lwd=2 )
+shade( mu_ci , rugged_seq , col=col.alpha(rangi2,0.3) )
+mtext("African nations minus Seychelles")
+
+# plot non-Africa - cont_africa=0
+plot( d.A0$rugged_std , d.A0$log_gdp_std , pch=1 , col="black" ,
+    xlab="ruggedness (standardized)" , ylab="log GDP (as proportion of mean)" ,
+    xlim=c(0,1) )
+mu <- link( m8H3.noSey , data=data.frame( cont_africa=0 , rugged_std=rugged_seq ) )
+mu_mean <- apply( mu , 2 , mean )
+mu_ci <- apply( mu , 2 , PI , prob=0.97 )
+lines( rugged_seq , mu_mean , lwd=2 )
+shade( mu_ci , rugged_seq )
+mtext("Non-African nations (minus Seychelles in model)")
+```
+
+> The slope for African nations' gdp v. ruggedness has decreased.  
+
+
+(c) Finally, conduct a model comparison analysis, using WAIC. Fit three models to the data without Seychelles:  
+Model 1 : $y_i \sim Normal(\mu_i, \sigma)$  
+$\mu_i = \alpha + \beta_R R_i$  
+Model 2 : $y_i \sim Normal(\mu_i, \sigma)$  
+$\mu_i = \alpha + \beta_A A_i + \beta_R R_i$  
+Model 3 : $y_i \sim Normal(\mu_i, \sigma)$  
+$\mu_i = \alpha + \beta_A A_i + \beta_R R_i + \beta_{AR} A_i R_i$  
+Use whatever priors you think are sensible. Plot the model-averaged predictions of this model set.
+Do your inferences differ from those in (b)? Why or why not?
+```{r}
+m8H3.C1 <- quap(
+    alist(
+        log_gdp_std ~ dnorm( mu , sigma ) ,
+        mu <- a + bR*rugged_std,
+        a ~ dnorm( 1 , 0.1 ) ,
+        bR ~ dnorm( 0, 0.3 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=dd.noSey )
+
+m8H3.C2 <- quap(
+    alist(
+        log_gdp_std ~ dnorm( mu , sigma ) ,
+        mu <- a + bA*cont_africa +  bR*rugged_std,
+        a ~ dnorm( 1 , 0.1 ) ,
+        c(bA, bR) ~ dnorm( 0 , 0.3 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=dd.noSey )
+
+m8H3.C3 <- quap(
+    alist(
+        log_gdp_std ~ dnorm( mu , sigma ) ,
+        mu <- a + bA*cont_africa +  bR*rugged_std + bAR*cont_africa*rugged_std ,
+        a ~ dnorm( 1 , 0.1 ) ,
+        c(bA, bR, bAR) ~ dnorm( 0 , 0.3 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=dd.noSey )
+
+compare(m8H3.C1, m8H3.C2, m8H3.C3)
+```
+> The model with A and R is equivalent to the interaction model.
+
+
+##Plus, use the tomato.csv (attached) data set and evaluate whether hypocotyl length ("hyp") is affected by shade ("trt"), species ("species") and their interaction.
+```{r}
+tomato <- read.csv("Tomato.csv")
+head(tomato)
+str(tomato)
+
+tomato$h <- standardize(tomato$hyp)
+
+tomato$s <- tomato$species %>% as.numeric()
+tomato$t <- tomato$trt %>% as.numeric() - 1
+
+tomato <- tomato %>% cbind( model.matrix(~s, data=tomato) )
+```
+
+```{r}
+# mtomato <- quap(
+#     alist(
+#         h ~ dnorm( mu , sigma ) ,
+#         mu <- a + bShade*t +  bSpecies*species + bSS*t*s ,
+#         a ~ dnorm( 0 , 1 ) ,
+#         c(bShade,bSpecies,bSS) ~ dnorm( 0 , 1 ) ,
+#         sigma ~ dexp( 1 )
+#     ) ,
+#     data=tomato )
+# precis(mtomato, depth=2)
+```
