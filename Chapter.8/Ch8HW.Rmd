@@ -293,3 +293,243 @@ precis(mtomato.int, depth=2)
 
 compare(mtomato, mtomato.int)
 ```
+
+###=====================================   
+###******** SECOND PART  ***************   
+###=====================================    
+
+7M1, 7M2
+7H1, 7H2, 7H4
+
+##7M1. Recall the tulips example from the chapter. Suppose another set of treatments adjusted the temperature in the greenhouse over two levels: cold and hot. The data in the chapter were collected at the cold temperature. You find none of the plants grown under the hot temperature developed any blooms at all, regardless of the water and shade levels. Can you explain this result in terms of interactions between water, shade, and temperature?  
+> Light and water produce blooms provided temperature doesn't rise above a threshold. 
+
+
+##7M2. Can you invent a regression equation that would make the bloom size zero, whenever the temperature is hot?  
+$\mu_i = \gamma_{h/c}[ \alpha + \beta_w w_i + \beta_s s_i + (\beta_w + \beta_s) w_i s_i]$  
+$\gamma_h = 0$  
+$\gamma_c = 1$
+ 
+
+##7H1. Return to the data(tulips) example in the chapter. Now include the bed variable as a predictor in the interaction model. Don’t interact bed with the other predictors; just include it as a main effect. Note that bed is categorical. So to use it properly, you will need to either construct dummy variables or rather an index variable, as explained in Chapter ??.
+```{r}
+library(rethinking)
+data(tulips)
+d <- tulips
+str(d)
+
+d$blooms_std <- d$blooms / max(d$blooms)
+d$water_cent <- d$water - mean(d$water)
+d$shade_cent <- d$shade - mean(d$shade)
+
+summary(d)
+apply( d[ -1 ], 2, sd ) %>% round(2)
+
+```
+```{r}
+## Modified R code 8.24
+m.tulip <- quap(
+    alist(
+        blooms_std ~ dnorm( mu , sigma ) ,
+        mu <- a[bed] + bw*water_cent + bs*shade_cent + bws*water_cent*shade_cent ,
+        a[bed] ~ dnorm( 0.5 , 0.25 ) ,
+        bw ~ dnorm( 0 , 0.25 ) ,
+        bs ~ dnorm( 0 , 0.25 ) ,
+        bws ~ dnorm( 0 , 0.25 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=d )
+
+precis(m.tulip, depth=2)
+
+## Is creating an ID necessary? -- NO. Factor levels already incorporated in original variable.
+#
+# d$bed_id <- as.numeric(d$bed)
+# m.tulipID <- quap(
+#     alist(
+#         blooms_std ~ dnorm( mu , sigma ) ,
+#         mu <- a[bed_id] + bw*water_cent + bs*shade_cent + bws*water_cent*shade_cent ,
+#         a[bed_id] ~ dnorm( 0.5 , 0.25 ) ,
+#         bw ~ dnorm( 0 , 0.25 ) ,
+#         bs ~ dnorm( 0 , 0.25 ) ,
+#         bws ~ dnorm( 0 , 0.25 ) ,
+#         sigma ~ dexp( 1 )
+#     ) ,
+#     data=d )
+# 
+# precis(m.tulipID, depth=2)
+```
+
+
+##7H2. Use WAIC to compare the model from 7H1 to a model that omits bed. What do you infer from this comparison? Can you reconcile the WAIC results with the posterior distribution of the bed coefficients?
+```{r}
+## R code 8.24
+m.tulip.OG <- quap(
+    alist(
+        blooms_std ~ dnorm( mu , sigma ) ,
+        mu <- a + bw*water_cent + bs*shade_cent + bws*water_cent*shade_cent ,
+        a ~ dnorm( 0.5 , 0.25 ) ,
+        bw ~ dnorm( 0 , 0.25 ) ,
+        bs ~ dnorm( 0 , 0.25 ) ,
+        bws ~ dnorm( 0 , 0.25 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=d )
+
+coeftab( m.tulip, m.tulip.OG )
+compare( m.tulip, m.tulip.OG )
+```
+> The model that includes bed has a slightly lower WAIC score, although given that it is smaller than the dSE, the WAIC scores are effectively the same. Bed A seems to have overall lower blooms on average than the other two beds, which are similar to each other. When we condition on bed, giving each its own intercept, we include information which contributes to our predictive power. The other model takes an average of the intercepts for each bed. The other model expects tulip in bed A to yield less blooms on average, holding all other variables at their mean. It expects slightly more in beds B and C.   
+
+##7H4. The values in data(nettle) are data on language diversity in 74 nations. The meaning of each column is given below.  
+(1) country: Name of the country
+(2) num.lang: Number of recognized languages spoken
+(3) area: Area in square kilometers
+(4) k.pop: Population, in thousands
+(5) num.stations: Number of weather stations that provided data for the next two columns
+(6) mean.growing.season: Average length of growing season, in months
+(7) sd.growing.season: Standard deviation of length of growing season, in months
+
+Use these data to evaluate the hypothesis that language diversity is partly a product of food security. The notion is that, in productive ecologies, people don’t need large social networks to buffer them against risk of food shortfalls. This means ethnic groups can be smaller and more self-sufficient, leading to more languages per capita. In contrast, in a poor ecology, there is more subsistence risk, and so human societies have adapted by building larger networks of mutual obligation to provide food insurance. This in turn creates social forces that help prevent languages from diversifying. Specifically, you will try to model the number of languages per capita as the outcome variable:
+
+Use the logarithm of this new variable as your regression outcome. (A count model would be better
+here, but you’ll learn those later, in Chapter 11.) This problem is open ended, allowing you to decide how you address the hypotheses and the uncertain advice the modeling provides. If you think you need to use WAIC anyplace, please do. If you think you need certain priors, argue for them. If you think you need to plot predictions in a certain way, please do. Just try to honestly evaluate the main effects of both mean.growing.season and sd.growing.season, as well as their two-way interaction, as outlined in parts (a), (b), and (c) below. If you are not sure which approach to use, try several.  
+
+```{r}
+data(nettle)
+d <- nettle 
+
+# R code 8.27
+d$lang.per.cap <- d$num.lang / d$k.pop
+
+# log transform lang per cap and area
+d$log.lang.pcap <- log( d$lang.per.cap )
+d$log.area <- log( d$area )
+
+# center variables
+d$log.lang.cent <- d$log.lang.pcap - mean( d$log.lang.pcap )
+d$mean.growing.cent <- d$mean.growing.season - mean( d$mean.growing.season )
+d$log.area.cent <- d$log.area - mean( d$log.area )
+d$sd.growing.cent <- d$sd.growing.season - mean( d$sd.growing.season )
+
+
+# mean, sd, and range
+summary(d)
+apply( d[-1], 2, sd ) %>% round(2)
+# apply( d[-1], 2, range ) %>% diff()
+```
+
+
+(a) Evaluate the hypothesis that language diversity, as measured by log(lang.per.cap), is positively associated with the average length of the growing season, mean.growing.season. Consider log(area) in your regression(s) as a covariate (not an interaction). Interpret your results.  
+
+```{r}
+# qplot(mean.growing.season, log.lang.pcap, data=d)
+qplot(mean.growing.cent, log.lang.cent, data=d)
+qplot(sd.growing.cent, log.lang.cent, data=d)
+
+```
+
+
+```{r}
+m.A <- quap(
+    alist(
+        log.lang.cent ~ dnorm( mu , sigma ) ,
+        mu <- a + bG*mean.growing.cent,
+        a ~ dnorm( 0 , 0.85 ) ,
+        bG ~ dnorm( 0 , 0.4 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=d )
+
+## Checck prior
+prior <- extract.prior( m.A )
+
+# set up the plot dimensions
+plot( NULL , xlim=c( -8, 5.5 ) , ylim=c( -4, 6 ) ,
+    xlab="mean growing season" , ylab="log language per capita, centered" )
+abline( h=min(d$log.lang.cent) , lty=2 )
+abline( h=max(d$log.lang.cent) , lty=2 )
+
+# draw 50 lines from the prior
+plot_seq <- seq( from=-8.5 , to=6 , length.out=100 )
+mu <- link( m.A , post=prior , data=data.frame(mean.growing.cent=plot_seq) )
+for ( i in 1:100 ) lines( plot_seq , mu[i,] , col=col.alpha("black",0.3) )
+```
+
+```{r}
+m.A_area <- quap(
+    alist(
+        log.lang.cent ~ dnorm( mu , sigma ) ,
+        mu <- a + bG*mean.growing.cent + bA*log.area.cent,
+        a ~ dnorm( 0 , 0.85 ) ,
+        c(bG, bA) ~  dnorm( 0 , 0.4 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=d )
+
+coeftab( m.A, m.A_area ) 
+compare( m.A, m.A_area )
+
+m.A %>% precis()
+m.A_area %>% precis()
+```
+> In both models, there is a slight positive association between growing season and language diversity. Area does not contribute much to WAIC in comparison with the simple model, but when included is slightly negatively associated with language diversity.
+
+(b) Now evaluate the hypothesis that language diversity is negatively associated with the standard deviation of length of growing season, sd.growing.season. This hypothesis follows from uncertainty in harvest favoring social insurance through larger social networks and therefore fewer languages. Again, consider log(area) as a covariate (not an interaction). Interpret your results.  
+```{r}
+m.B <- quap(
+    alist(
+        log.lang.cent ~ dnorm( mu , sigma ) ,
+        mu <- a + bG*mean.growing.cent + bS*sd.growing.cent, 
+        a ~ dnorm( 0 , 0.85 ) ,
+        c( bG, bS ) ~  dnorm( 0 , 0.4 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=d )
+
+m.B_area <- quap(
+    alist(
+        log.lang.cent ~ dnorm( mu , sigma ) ,
+        mu <- a + bG*mean.growing.cent + bS*sd.growing.cent + bA*log.area.cent,
+        a ~ dnorm( 0 , 0.85 ) ,
+        c( bG, bS, bA ) ~  dnorm( 0 , 0.4 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=d )
+
+coeftab( m.A, m.A_area, m.B, m.B_area ) 
+compare( m.A, m.A_area, m.B, m.B_area )
+```
+> There is a stronger negative assocaition between language diversity and the sd of the growing season.
+
+(c) Finally, evaluate the hypothesis that mean.growing.season and sd.growing.season interact to synergistically reduce language diversity. The idea is that, in nations with longer average growing seasons, high variance makes storage and redistribution even more important than it would be otherwise. That way, people can cooperate to preserve and protect windfalls to be used during the droughts. These forces in turn may lead to greater social integration and fewer languages.]
+```{r}
+m.C <- quap(
+    alist(
+        log.lang.cent ~ dnorm( mu , sigma ) ,
+        mu <- a + bG*mean.growing.cent + bS*sd.growing.cent + 
+          bGS*mean.growing.cent*sd.growing.cent, 
+        a ~ dnorm( 0 , 0.85 ) ,
+        c( bG, bS, bGS ) ~  dnorm( 0 , 0.4 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=d )
+
+m.C_area <- quap(
+    alist(
+        log.lang.cent ~ dnorm( mu , sigma ) ,
+        mu <- a + bG*mean.growing.cent + bS*sd.growing.cent + 
+          bA*log.area.cent + bGS*mean.growing.cent*sd.growing.cent,
+        a ~ dnorm( 0 , 0.85 ) ,
+        c( bG, bS, bA, bGS ) ~  dnorm( 0 , 0.4 ) ,
+        sigma ~ dexp( 1 )
+    ) ,
+    data=d )
+
+coeftab( m.A, m.A_area, m.B, m.B_area, m.C, m.C_area ) 
+compare( m.A, m.A_area, m.B, m.B_area, m.C, m.C_area )
+
+m.C %>% precis()
+
+```
+> The interaction model has the best WAIC score, dSE above the other models. Although growing season still has a positive interaction, both sd of growing season and the interaction with growing season have a negative impact on language diversity. [Can we say anything about sigma being smaller in this model as we do in ANOVA--that is does sigma decrease as our model encompasses more predictor variables?]
