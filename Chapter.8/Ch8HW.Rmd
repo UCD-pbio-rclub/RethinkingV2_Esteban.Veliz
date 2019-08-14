@@ -376,7 +376,7 @@ m.tulip.OG <- quap(
     ) ,
     data=d )
 
-coeftab( m.tulip, m.tulip.OG )
+plot( coeftab( m.tulip, m.tulip.OG ) )
 compare( m.tulip, m.tulip.OG )
 ```
 > The model that includes bed has a slightly lower WAIC score, although given that it is smaller than the dSE, the WAIC scores are effectively the same. Bed A seems to have overall lower blooms on average than the other two beds, which are similar to each other. When we condition on bed, giving each its own intercept, we include information which contributes to our predictive power. The other model takes an average of the intercepts for each bed. The other model expects tulip in bed A to yield less blooms on average, holding all other variables at their mean. It expects slightly more in beds B and C.   
@@ -467,11 +467,8 @@ m.A_area <- quap(
     ) ,
     data=d )
 
-coeftab( m.A, m.A_area ) 
+plot( coeftab( m.A, m.A_area ) ) 
 compare( m.A, m.A_area )
-
-m.A %>% precis()
-m.A_area %>% precis()
 ```
 > In both models, there is a slight positive association between growing season and language diversity. Area does not contribute much to WAIC in comparison with the simple model, but when included is slightly negatively associated with language diversity.
 
@@ -497,7 +494,7 @@ m.B_area <- quap(
     ) ,
     data=d )
 
-coeftab( m.A, m.A_area, m.B, m.B_area ) 
+plot( coeftab( m.A, m.A_area, m.B, m.B_area ), cex=0.7 )
 compare( m.A, m.A_area, m.B, m.B_area )
 ```
 > There is a stronger negative assocaition between language diversity and the sd of the growing season.
@@ -526,10 +523,7 @@ m.C_area <- quap(
     ) ,
     data=d )
 
-coeftab( m.A, m.A_area, m.B, m.B_area, m.C, m.C_area ) 
+plot( coeftab( m.A, m.A_area, m.B, m.B_area, m.C, m.C_area ), cex=0.7 )
 compare( m.A, m.A_area, m.B, m.B_area, m.C, m.C_area )
-
-m.C %>% precis()
-
 ```
 > The interaction model has the best WAIC score, dSE above the other models. Although growing season still has a positive interaction, both sd of growing season and the interaction with growing season have a negative impact on language diversity. [Can we say anything about sigma being smaller in this model as we do in ANOVA--that is does sigma decrease as our model encompasses more predictor variables?]
